@@ -1,4 +1,3 @@
-import numpy as np
 
 def get_max_drawdown(array):
     drawdowns = []
@@ -8,8 +7,6 @@ def get_max_drawdown(array):
         drawdowns.append(drawdown)
     return max(drawdowns)
 
-np.random.seed(1)
-a = np.random.randn(1000)
-values = np.cumsum(a)
+values = [1, 2, 3, 5, 8, 13, 5, 6, 1, 29, 2, 1, 11, 17]
 result = get_max_drawdown(values)
 print(result)
