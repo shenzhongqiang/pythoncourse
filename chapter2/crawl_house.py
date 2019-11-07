@@ -64,7 +64,7 @@ def get_item_num(entry_url):
     num_str = num_nodes[0].text.strip()
     return int(num_str)
 
-def get_houses_by_sub_district(sub_distr_id, entry_url):
+def get_houses_by_sub_district(sub_distr_id, distr_name, sub_distr_name, entry_url):
     url_patt = entry_url + "pg{}/"
 
     total_num = get_item_num(entry_url)
@@ -74,13 +74,11 @@ def get_houses_by_sub_district(sub_distr_id, entry_url):
     db = client[DB]
     for i in range(1, last_page+1, 1):
         url = url_patt.format(i)
-        print(url)
         r = requests.get(url, headers=headers, verify=False)
         content = r.content.decode("utf-8")
         root = etree.HTML(content)
         content_node = root.find('.//div[@class="content "]')
         if content_node is None:
-            print(url)
             r = requests.get(url, headers=headers, verify=False)
             content = r.content.decode("utf-8")
             root = etree.HTML(content)
@@ -101,27 +99,39 @@ def get_houses_by_sub_district(sub_distr_id, entry_url):
             housecode = title_node.attrib["data-housecode"]
             url = title_node.attrib["href"]
 
-            xiaoqu_nodes = div_node.xpath('./div[@class="address"]/div[@class="houseInfo"]/a')
-            xiaoqu_name = ""
+            info_nodes = div_node.xpath('./div[@class="address"]/div[@class="houseInfo"]/span')
+            size = 0
+            build_year = 0
             house_info = ""
-            if len(xiaoqu_nodes) > 0:
-                xiaoqu_name = xiaoqu_nodes[0].text
-                house_info = xiaoqu_nodes[0].tail
-
-            pos_nodes = div_node.xpath('./div[@class="flood"]/div[@class="positionInfo"]/span')
             building_info = ""
-            if len(pos_nodes) > 0:
-                building_info = pos_nodes[0].tail
-                if building_info:
-                    matched = re.search(r'(.*)\s+-\s+$', building_info)
-                    if matched:
-                        building_info = matched.group(1)
+            huxing = ""
+            zhuangxiu = ""
+            if len(info_nodes) > 0:
+                print(etree.tostring(info_nodes[0]))
+                house_info = info_nodes[0].tail
+                parts = house_info.split("|")
+                size_text = parts[1]
+                matched = re.search(r'(.*)平米', size_text)
+                if matched:
+                    size = float(matched.group(1))
+                    print(size)
 
-            area_nodes = div_node.xpath('./div[@class="flood"]/div[@class="positionInfo"]/a')
-            area = ""
-            if len(area_nodes) > 0:
-                area_node = area_nodes[0]
-                area = area_node.text
+                year_text = parts[5]
+                matched = re.search(r'(.*)年建', year_text)
+                if matched:
+                    build_year = int(matched.group(1))
+                    print(build_year)
+                print(house_info)
+
+                building_info = parts[4]
+                huxing = parts[0]
+                zhuangxiu = parts[3]
+
+            xiaoqu_nodes = div_node.xpath('./div[@class="flood"]/div[@class="positionInfo"]/a')
+            xiaoqu_name = ""
+            if len(xiaoqu_nodes) > 0:
+                xiaoqu_node = xiaoqu_nodes[0]
+                xiaoqu_name = xiaoqu_node.text
 
             follow_nodes = div_node.xpath('./div[@class="followInfo"]/span')
             follow_info = ""
@@ -135,7 +145,7 @@ def get_houses_by_sub_district(sub_distr_id, entry_url):
                 subway_node = subway_nodes[0]
                 subway_info = subway_node.text
 
-            tax_nodes = div_node.xpath('./div[@class="tag"]/span[@class="taxfree"]')
+            tax_nodes = div_node.xpath('./div[@class="tag"]/span[@class="five"]')
             tax_info = ""
             if len(tax_nodes) > 0:
                 tax_node = tax_nodes[0]
@@ -146,24 +156,29 @@ def get_houses_by_sub_district(sub_distr_id, entry_url):
             price_unit = ""
             if len(price_nodes) > 0:
                 price_node = price_nodes[0]
-                price_num = price_node.text
+                price_num = float(price_node.text)
                 price_unit = price_node.tail
 
             up_nodes = div_node.xpath('./div[@class="priceInfo"]/div[@class="unitPrice"]')
             unit_price = 0
             if len(up_nodes) > 0:
                 up_node = up_nodes[0]
-                unit_price = up_node.attrib["data-price"]
+                unit_price = float(up_node.attrib["data-price"])
 
             item = {
                 "item_id": housecode,
                 "sub_distr_id": sub_distr_id,
+                "distr_name": distr_name,
+                "sub_distr_name": sub_distr_name,
                 "title": title,
                 "url": url,
                 "house_info": house_info,
                 "xiaoqu_name": xiaoqu_name,
+                "huxing": huxing,
+                "zhuangxiu": zhuangxiu,
                 "building_info": building_info,
-                "area": area,
+                "size": size,
+                "build_year": build_year,
                 "follow_info": follow_info,
                 "subway_info": subway_info,
                 "tax_info": tax_info,
@@ -178,20 +193,18 @@ def get_all_houses():
     client = pymongo.MongoClient()
     db = client[DB]
     sub_distr_rows = db.sub_districts.find()
-    start = False
+    start = True
     for sub_distr in sub_distr_rows:
         entry_url = sub_distr["url"]
         sub_distr_id = sub_distr["_id"]
         distr_name = sub_distr["district"]
         sub_distr_name = sub_distr["sub_district"]
         print(distr_name, sub_distr_name)
-        if distr_name == "浦东" and sub_distr_name == "川沙":
+        if distr_name == "杨浦" and sub_distr_name == "五角场":
             start = True
         if start:
-            get_houses_by_sub_district(sub_distr_id, entry_url)
-
+            get_houses_by_sub_district(sub_distr_id, distr_name, sub_distr_name, entry_url)
 
 if __name__ == "__main__":
-    #get_sub_districts()
     get_all_houses()
 
