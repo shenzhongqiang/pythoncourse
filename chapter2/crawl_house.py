@@ -107,21 +107,17 @@ def get_houses_by_sub_district(sub_distr_id, distr_name, sub_distr_name, entry_u
             huxing = ""
             zhuangxiu = ""
             if len(info_nodes) > 0:
-                print(etree.tostring(info_nodes[0]))
                 house_info = info_nodes[0].tail
                 parts = house_info.split("|")
                 size_text = parts[1]
                 matched = re.search(r'(.*)平米', size_text)
                 if matched:
                     size = float(matched.group(1))
-                    print(size)
 
                 year_text = parts[5]
                 matched = re.search(r'(.*)年建', year_text)
                 if matched:
                     build_year = int(matched.group(1))
-                    print(build_year)
-                print(house_info)
 
                 building_info = parts[4]
                 huxing = parts[0]
@@ -193,7 +189,7 @@ def get_all_houses():
     client = pymongo.MongoClient()
     db = client[DB]
     sub_distr_rows = db.sub_districts.find()
-    start = True
+    start = False
     for sub_distr in sub_distr_rows:
         entry_url = sub_distr["url"]
         sub_distr_id = sub_distr["_id"]
