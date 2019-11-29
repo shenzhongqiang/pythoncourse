@@ -128,12 +128,17 @@ def get_all_houses():
     client = pymongo.MongoClient()
     db = client["house"]
     cursor = db.subdistricts.find()
+    start = False
     for item in cursor:
         district_name = item["district_name"]
         sub_district_name = item["sub_district_name"]
         sub_district_url = item["sub_district_url"]
-        print(district_name, sub_district_name)
-        get_houses_by_sub_district(district_name, sub_district_name, sub_district_url)
+        # skip crawled district and sub district
+        if district_name == "杨浦" and sub_district_name == "控江路":
+            start = True
+        if start:
+            print(district_name, sub_district_name)
+            get_houses_by_sub_district(district_name, sub_district_name, sub_district_url)
 
 if __name__ == "__main__":
     get_all_houses()
